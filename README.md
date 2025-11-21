@@ -1,100 +1,53 @@
-# WeParty
+# WeParty monorepo (frontend + backend)
 
-Guía rápida para montar la plataforma de minijuegos online (p. ej. "El impostor" y "Agentes Secretos") con frontend en React, backend Node/Express + Socket.io y Supabase para datos y autenticación.
+Código base para dos juegos party online en español: **El Impostor** y **Agentes Secretos**. Incluye frontend React + Vite + Tailwind, backend Express + Socket.io, CSV local para palabras y guías de despliegue en Netlify (frontend), Render (backend) y Supabase (datos opcionales).
 
-## 1️⃣ Arquitectura general
-- **Frontend**: SPA con React + Vite (TypeScript). UI para login/registro, selección de juego, salas, partida y chat. Deploy en Vercel/Netlify.
-- **Backend (API + tiempo real)**: Node.js + Express para REST y Socket.io para salas/eventos de juego. Deploy en Railway/Render.
-- **Base de datos + Auth**: Supabase (Postgres + Auth). Opción de usar su Realtime, aunque para el juego se recomienda Socket.io.
-- **Flujo**: Frontend → Backend (REST + Socket.io) → Supabase (datos/auth) y Socket.io ↔ clientes.
+## Estructura
+- `frontend/`: SPA con React Router, Tailwind, cliente Supabase y socket.io-client.
+- `backend/`: API REST + Socket.io con lógica de juego en memoria y motores tipados para ambos juegos.
+- `backend/data/impostor_words.csv`: palabras y categorías para "El Impostor".
 
-## 2️⃣ Servicios gratuitos recomendados
-- **Frontend**: React + Vite + TS. Hosting: Vercel (auto-deploy desde GitHub) o Netlify.
-- **Backend**: Node.js + Express + Socket.io. Hosting: Railway o Render (free tier para un servicio Node).
-- **Base de datos/Auth**: Supabase (Postgres + Auth, SDK JS, login email/contraseña u OAuth).
+## Flujo rápido
+1. **Local**
+   - Frontend: `cd frontend && npm install && npm run dev` (http://localhost:5173)
+   - Backend: `cd backend && npm install && npm run dev` (http://localhost:4000)
+   - Variables: `VITE_API_URL` apunta al backend; `FRONTEND_ORIGIN` en backend debe permitir el origen del frontend.
+2. **Salas y juego**
+   - Crear sala vía home (elige juego y nick) → lobby por sockets.
+   - Host pulsa **Empezar partida** → UI redirige a ruta del juego.
+   - "El Impostor": fases `WORD_REVEAL` → `DISCUSSION` → `VOTING` → `RESULT` controladas por eventos.
+   - "Agentes Secretos": fases presidencia, votación, legislación y poderes, con condiciones de victoria por políticas o ejecución del líder.
 
-## 3️⃣ Flujo con repos y despliegues automáticos
-1. **Repos**: `party-games-frontend` y `party-games-backend` (o monorepo, pero mejor separado para empezar).
-2. **Frontend → Vercel**: Importar repo desde GitHub; Vercel detecta Vite/React. Cada push a `main` despliega.
-3. **Backend → Railway/Render**: Crear servicio desde el repo; configurar env vars (URL/keys de Supabase). Cada push redeploy.
-4. **Supabase**: Crear proyecto; tablas para users/rooms/games/words. Usar URL/keys en frontend (auth/lecturas) y backend (lógica/escritura).
+## Qué verificar en Netlify (frontend)
+- Configurar en Site settings → Build & deploy:
+  - **Build command**: `npm run build`
+  - **Publish directory**: `dist`
+- Variables de entorno en Site configuration → Environment variables:
+  - `VITE_API_URL` = URL pública del backend en Render/Railway.
+  - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` si usas Supabase.
+- Fichero `public/_redirects` presente con `/*  /index.html  200` para que React Router funcione.
+- Deploy log sin errores de Tailwind/Vite.
 
-## 4️⃣ Estructura básica sugerida
-### Frontend (`party-games-frontend`)
-```
-src/
-  main.tsx
-  App.tsx
-  routes/
-    Home.tsx
-    Login.tsx
-    Lobby.tsx
-    GameImpostor.tsx
-    GameSecretAgents.tsx
-  components/
-    Navbar.tsx
-    GameCard.tsx
-    RoomCodeInput.tsx
-    PlayerList.tsx
-    Chat.tsx
-  services/
-    supabaseClient.ts
-    api.ts         // llamadas a tu backend
-    socket.ts      // conexión Socket.io
-```
-- **Home**: elegir juego, crear/unirse a sala.
-- **Lobby**: jugadores, chat, botón "empezar".
-- **GameImpostor / GameSecretAgents**: UI reactiva a eventos de Socket.io.
+## Qué hacer en Render (backend)
+- Crear servicio Web apuntando al repo `backend/`.
+- En Settings:
+  - **Build command**: `npm run build`
+  - **Start command**: `npm start`
+  - **Environment**: Node 20+.
+- Variables de entorno:
+  - `PORT` (Render asigna automáticamente, usa `PORT` en env).
+  - `FRONTEND_ORIGIN` con el dominio Netlify (y `http://localhost:5173` para pruebas).
+  - Claves Supabase si quieres persistencia (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`).
+- Comprueba en Logs que el servidor arranca y que `/health` responde `ok`.
 
-### Backend (`party-games-backend`)
-```
-src/
-  index.ts
-  config/
-    env.ts
-    supabase.ts
-  routes/
-    auth.ts
-    rooms.ts
-    words.ts
-  socket/
-    index.ts
-    impostor.ts
-    secretAgents.ts
-  models/
-    room.ts
-    game.ts
-    player.ts
-  utils/
-    validations.ts
-```
-- `index.ts`: monta Express + Socket.io.
-- `socket/impostor.ts`: crea partida, asigna impostor, palabra oculta, gestiona turnos/votos.
-- `socket/secretAgents.ts`: roles (leales/traidores), tableros según nº jugadores, turnos y votos.
+## Qué preparar en Supabase
+- Proyecto nuevo (free tier) con Postgres.
+- (Opcional) Tablas sugeridas: `rooms`, `players`, `topics`, `words` si deseas persistir salas y palabras.
+- Copia `Project URL` y `anon/service keys` para el frontend (`anon`) y backend (`service`).
 
-## 5️⃣ Palabras y temáticas para "El impostor"
-Tablas en Supabase:
-- **topics**: `id`, `name` (p. ej. "comida", "cine").
-- **words**: `id`, `topic_id` (FK), `word` (p. ej. "pizza").
-
-Endpoint de ejemplo: `GET /words/random?topic_id=X` (o sin filtro). Al empezar partida: elegir palabra random, asignar impostor y emitir eventos (todos reciben la palabra salvo el impostor, que recibe solo su rol).
-
-## 6️⃣ Adaptación de "Secret Hitler"
-- Renombrar a **"Agentes Secretos"** u otro nombre original; no usar arte/logo oficial.
-- Dos bandos: "Leales" vs "Traidores".
-- Tableros definidos en JSON según jugadores, p. ej.:
-  ```ts
-  const boards = {
-    5: { loyalPoliciesToWin: 5, traitorPoliciesToWin: 6, specialPowers: [...] },
-    6: { ... },
-    7: { ... },
-  };
-  ```
-- Seleccionar tablero según nº de jugadores de la sala.
-
-## 7️⃣ Prompts útiles para generar código
-- "Genera un proyecto React + Vite + TypeScript con las siguientes rutas y componentes: …"
-- "Crea un backend Node + Express + Socket.io con estructura de carpetas: … y un socket manager para el juego del impostor con estos eventos: …"
-- "Genera un cliente de Supabase para el frontend con estas tablas: …"
-
-Con esta guía puedes bootstrapear los repos y desplegar con CI/CD minimalista en los tiers gratuitos.
+## Más detalles
+- Documentación de cada paquete en `frontend/README.md` y `backend/README.md`.
+- Lógica de motores:
+  - `backend/src/game/impostorEngine.ts`: asignación de impostor, elección de palabra desde CSV, votos y reinicio.
+  - `backend/src/game/agentsEngine.ts`: reparto de roles (Leales vs Infiltrados), mazo de políticas, poderes y rotación de presidencia.
+- Assets SVG minimalistas en `frontend/src/assets/agents/` (iconos de bandos y líder).
