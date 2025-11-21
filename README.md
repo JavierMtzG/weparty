@@ -19,9 +19,8 @@ Código base para dos juegos party online en español: **El Impostor** y **Agent
    - "Agentes Secretos": fases presidencia, votación, legislación y poderes, con condiciones de victoria por políticas o ejecución del líder.
 
 ## Qué verificar en Netlify (frontend)
-- Configurar en Site settings → Build & deploy:
-  - **Build command**: `npm run build`
-  - **Publish directory**: `dist`
+- El repo incluye `netlify.toml` con `base = "frontend"`, `command = "npm install && npm run build"` y `publish = "dist"`, para evitar 404 en monorepo.
+- Si configuras manualmente en Site settings → Build & deploy, usa los mismos valores: build command `npm run build`, publish `dist` y base dir `frontend/`.
 - Variables de entorno en Site configuration → Environment variables:
   - `VITE_API_URL` = URL pública del backend en Render/Railway.
   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` si usas Supabase.
