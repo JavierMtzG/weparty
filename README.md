@@ -19,14 +19,20 @@ Código base para dos juegos party online en español: **El Impostor** y **Agent
    - "Agentes Secretos": fases presidencia, votación, legislación y poderes, con condiciones de victoria por políticas o ejecución del líder.
 
 ## Qué verificar en Netlify (frontend)
-- Configurar en Site settings → Build & deploy:
-  - **Build command**: `npm run build`
-  - **Publish directory**: `dist`
+- El repo incluye `netlify.toml` en la raíz con:
+  - build command `npm install --prefix frontend && npm run build --prefix frontend`
+  - publish dir `frontend/dist`
+  - redirect SPA `/* -> /index.html 200`
+  - `NODE_VERSION = 20` para que coincida con Vite.
+- Si prefieres configurarlo a mano en Site settings → Build & deploy:
+  - **Base directory**: no hace falta, porque el comando ya apunta a `frontend/`.
+  - **Build command**: `npm install --prefix frontend && npm run build --prefix frontend`
+  - **Publish directory**: `frontend/dist`
 - Variables de entorno en Site configuration → Environment variables:
   - `VITE_API_URL` = URL pública del backend en Render/Railway.
   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` si usas Supabase.
-- Fichero `public/_redirects` presente con `/*  /index.html  200` para que React Router funcione.
-- Deploy log sin errores de Tailwind/Vite.
+- Fichero `public/_redirects` ya incluido con `/*  /index.html  200` para que React Router funcione.
+- Comprueba que el deploy log no reporte errores de build y que la previsualización abra `index.html` sin 404.
 
 ## Qué hacer en Render (backend)
 - Crear servicio Web apuntando al repo `backend/`.
