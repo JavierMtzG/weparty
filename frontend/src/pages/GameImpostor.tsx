@@ -24,6 +24,9 @@ interface GameStateImpostor {
   impostorId?: string;
   winner?: 'CIVILIANS' | 'IMPOSTOR';
   votingResults?: VotingResult[];
+  category?: string;
+  difficulty?: 'facil' | 'medio' | 'dificil';
+  readyPlayerIds: string[];
 }
 
 export default function GameImpostor() {
@@ -31,6 +34,7 @@ export default function GameImpostor() {
   const [state, setState] = useState<GameStateImpostor | null>(null);
   const [ready, setReady] = useState(false);
   const [voteTarget, setVoteTarget] = useState<string | null>(null);
+  const [discussionSeconds, setDiscussionSeconds] = useState(120);
 
   const me = useMemo(() => state?.players.find((p) => p.id === socket.id), [state]);
 
@@ -42,10 +46,34 @@ export default function GameImpostor() {
     };
   }, [roomCode]);
 
+  useEffect(() => {
+    setReady(false);
+    setVoteTarget(null);
+    if (state?.phase === 'DISCUSSION') {
+      setDiscussionSeconds(120);
+      const timer = setInterval(() => {
+        setDiscussionSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+    return undefined;
+  }, [state?.phase]);
+
   if (!state) return <p className="text-slate-300">Cargando partida...</p>;
 
   const renderContent = () => {
     switch (state.phase) {
+      case 'LOBBY':
+        return (
+          <div className="card p-6 grid gap-3 text-center">
+            <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Sala {state.roomCode}</p>
+            <h2 className="text-3xl font-bold">Esperando a que empiece la ronda</h2>
+            <p className="text-slate-300">
+              Categoría: {state.category ? state.category : 'aleatoria'} · Dificultad: {state.difficulty ?? 'cualquiera'}
+            </p>
+            <p className="text-slate-500">El host empezará cuando todos estén listos.</p>
+          </div>
+        );
       case 'WORD_REVEAL':
         return (
           <div className="card p-6 grid gap-3 text-center">
@@ -71,6 +99,7 @@ export default function GameImpostor() {
             >
               {ready ? 'Esperando al resto...' : 'Listo'}
             </button>
+            <p className="text-xs text-slate-500">{state.readyPlayerIds.length} / {state.players.length} jugadores listos</p>
           </div>
         );
       case 'DISCUSSION':
@@ -78,6 +107,7 @@ export default function GameImpostor() {
           <div className="card p-6 grid gap-3 text-center">
             <h2 className="text-3xl font-bold">Fase de discusión</h2>
             <p className="text-slate-300">Hablad por voz. Cuando el host lo decida, pasaréis a la votación.</p>
+            <p className="text-lg font-semibold text-accent">Tiempo sugerido: {discussionSeconds}s</p>
             <button className="button-primary mx-auto" onClick={() => socket.emit('impostor_to_voting', { roomCode })}>
               Ir a votación (host)
             </button>
@@ -137,6 +167,9 @@ export default function GameImpostor() {
             <div className="flex gap-2">
               <button className="button-primary" onClick={() => socket.emit('impostor_restart', { roomCode })}>
                 Repetir partida
+              </button>
+              <button className="button-ghost" onClick={() => socket.emit('join_room', { roomCode })}>
+                Volver al lobby
               </button>
             </div>
           </div>
