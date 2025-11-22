@@ -16,11 +16,13 @@ VITE_SUPABASE_ANON_KEY=<anon-key>
 VITE_API_URL=http://localhost:4000
 ```
 
-## Despliegue en Netlify
-- Build command: `npm run build`
-- Publish directory: `dist`
-- Añade el fichero `public/_redirects` (ya incluido) con `/*  /index.html  200` para que React Router funcione.
-- Configura variables en Netlify UI: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL` apuntando al backend desplegado.
+## Despliegue en Vercel
+- Root directory: `frontend` (monorepo con backend aparte).
+- Framework preset: Vite.
+- Build command: `npm run build` (Vercel ejecuta `npm install` automáticamente).
+- Output directory: `dist`.
+- Fallback SPA: `vercel.json` en la raíz ya incluye la ruta comodín `/(.*) -> /index.html` para React Router.
+- Configura variables en Vercel UI: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL` apuntando al backend desplegado.
 
 ## Rutas
 - `/` home con selección de juego, creación y unión a sala.
