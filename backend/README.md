@@ -13,7 +13,7 @@ API REST mínima + sockets para los juegos "El Impostor" y "Agentes Secretos". E
 PORT=4000
 SUPABASE_URL=<opcional para persistir>
 SUPABASE_SERVICE_KEY=<opcional>
-FRONTEND_ORIGIN=https://tu-frontend.netlify.app
+FRONTEND_ORIGIN=https://tu-frontend.vercel.app
 ```
 
 ## Endpoints REST
@@ -32,4 +32,4 @@ FRONTEND_ORIGIN=https://tu-frontend.netlify.app
 - Build command: `npm run build`
 - Start command: `npm start`
 - Node version: 20+
-- Variables en Render Dashboard: `PORT`, `FRONTEND_ORIGIN` (dominio Netlify), y claves Supabase si las usas.
+- Variables en Render Dashboard: `PORT`, `FRONTEND_ORIGIN` (dominio Vercel), y claves Supabase si las usas.
