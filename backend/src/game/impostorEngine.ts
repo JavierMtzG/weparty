@@ -19,7 +19,7 @@ export interface GameStateImpostor {
   impostorId?: string;
   winner?: 'CIVILIANS' | 'IMPOSTOR';
   votingResults?: { voterId: string; targetId: string }[];
-  ready?: Set<string>;
+  readyPlayerIds: string[];
 }
 
 export function createImpostorGame(roomCode: string, players: Player[], options?: {
@@ -34,7 +34,7 @@ export function createImpostorGame(roomCode: string, players: Player[], options?
     secretWord: null,
     category: options?.category,
     difficulty: options?.difficulty,
-    ready: new Set(),
+    readyPlayerIds: [],
   };
 }
 
@@ -48,14 +48,15 @@ export function startImpostorRound(state: GameStateImpostor, words: WordEntry[])
     hasVoted: false,
     voteTargetId: undefined,
   }));
-  return { ...state, players, phase: 'WORD_REVEAL', secretWord: word.word, impostorId, ready: new Set() };
+  return { ...state, players, phase: 'WORD_REVEAL', secretWord: word.word, impostorId, readyPlayerIds: [] };
 }
 
 export function playerReadyWord(state: GameStateImpostor, playerId: string): GameStateImpostor {
-  const ready = new Set(state.ready);
-  ready.add(playerId);
-  const allReady = ready.size >= state.players.length;
-  return { ...state, ready, phase: allReady ? 'DISCUSSION' : state.phase };
+  const readySet = new Set(state.readyPlayerIds);
+  readySet.add(playerId);
+  const readyPlayerIds = Array.from(readySet);
+  const allReady = readyPlayerIds.length >= state.players.length;
+  return { ...state, readyPlayerIds, phase: allReady ? 'DISCUSSION' : state.phase };
 }
 
 export function advanceToVoting(state: GameStateImpostor): GameStateImpostor {
@@ -101,5 +102,13 @@ export function finalizeVoting(state: GameStateImpostor): GameStateImpostor {
 
 export function restartImpostor(state: GameStateImpostor): GameStateImpostor {
   const players = state.players.map((p) => ({ ...p, hasVoted: false, voteTargetId: undefined }));
-  return { ...state, players, phase: 'LOBBY', secretWord: null, winner: undefined, impostorId: undefined, ready: new Set() };
+  return {
+    ...state,
+    players,
+    phase: 'LOBBY',
+    secretWord: null,
+    winner: undefined,
+    impostorId: undefined,
+    readyPlayerIds: [],
+  };
 }

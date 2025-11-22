@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { socket } from '../services/socket';
 import PlayerList from '../components/PlayerList';
+import { FactionIcon, InfiltratedTrack, LoyalTrack } from '../components/agents/Graphics';
 
 interface AgentsPlayer {
   id: string;
@@ -30,6 +31,9 @@ interface AgentsState {
   winner?: 'LEALES' | 'INFILTRADOS';
   players: AgentsPlayer[];
   hand?: string[];
+  pendingPower?: 'INVESTIGATE' | 'EXECUTE';
+  readyPlayerIds: string[];
+  lastInvestigation?: { targetId: string; faction: 'LEAL' | 'INFILTRADO' };
 }
 
 export default function GameAgents() {
@@ -50,14 +54,21 @@ export default function GameAgents() {
 
   const statusHeader = (
     <div className="card p-4 grid gap-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Agentes Secretos</p>
-          <h2 className="text-2xl font-bold">Rol: {me.role === 'LIDER' ? 'Líder infiltrado' : me.role === 'INFILTRADO' ? 'Infiltrado' : 'Leal'}</h2>
-          <p className="text-sm text-slate-400">Presidente: {state.players.find((p) => p.id === state.presidentId)?.nickname ?? 'Por asignar'}</p>
-          <p className="text-sm text-slate-400">Agente: {state.players.find((p) => p.id === state.chancellorId)?.nickname ?? 'Pendiente'}</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <FactionIcon type={me.role === 'LIDER' ? 'LIDER' : me.role === 'INFILTRADO' ? 'INFILTRADO' : 'LEAL'} size={64} />
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Tu rol</p>
+            <h2 className="text-2xl font-bold">
+              {me.role === 'LIDER' ? 'Líder infiltrado' : me.role === 'INFILTRADO' ? 'Infiltrado' : 'Leal'}
+            </h2>
+            <p className="text-sm text-slate-400">
+              Preside: {state.players.find((p) => p.id === state.presidentId)?.nickname ?? 'Por asignar'} · Agente:{' '}
+              {state.players.find((p) => p.id === state.chancellorId)?.nickname ?? 'Pendiente'}
+            </p>
+          </div>
         </div>
-        <div className="text-right">
+        <div className="text-right space-y-1">
           <p className="text-slate-300">Políticas Leales: {state.loyalPolicies} / 5</p>
           <p className="text-slate-300">Políticas Infiltradas: {state.infiltratedPolicies} / 6</p>
           <p className="text-slate-500 text-sm">Descontento: {state.chaos} / 3</p>
@@ -77,15 +88,16 @@ export default function GameAgents() {
             <button className="button-primary mx-auto" onClick={() => socket.emit('agents_ready', { roomCode })}>
               Listo
             </button>
+            <p className="text-xs text-slate-500">{state.readyPlayerIds.length} / {state.players.length} jugadores listos</p>
           </div>
         );
       case 'CHOOSE_CHANCELLOR':
         return (
-          <div className="card p-6 grid gap-3">
-            <h3 className="text-2xl font-bold">El Presidente elige agente</h3>
-            {me.id === state.presidentId ? (
-              <div className="grid sm:grid-cols-2 gap-2">
-                {state.players
+            <div className="card p-6 grid gap-3">
+              <h3 className="text-2xl font-bold">El Presidente elige agente</h3>
+              {me.id === state.presidentId ? (
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {state.players
                   .filter((p) => p.id !== me.id && p.alive)
                   .map((player) => (
                     <button
@@ -105,12 +117,12 @@ export default function GameAgents() {
         );
       case 'VOTING':
         return (
-          <div className="card p-6 grid gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Votación de gobierno</p>
-              <h3 className="text-2xl font-bold">¿Aprobáis el gobierno?</h3>
-              <p className="text-slate-300">Presidente {state.players.find((p) => p.id === state.presidentId)?.nickname} + Agente {state.players.find((p) => p.id === state.chancellorId)?.nickname}</p>
-            </div>
+            <div className="card p-6 grid gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Votación de gobierno</p>
+                <h3 className="text-2xl font-bold">¿Aprobáis el gobierno?</h3>
+                <p className="text-slate-300">Presidente {state.players.find((p) => p.id === state.presidentId)?.nickname} + Agente {state.players.find((p) => p.id === state.chancellorId)?.nickname}</p>
+              </div>
             <div className="flex gap-3">
               <button
                 className={`button-primary ${vote === 'SI' ? '!bg-loyal text-white' : ''}`}
@@ -182,21 +194,46 @@ export default function GameAgents() {
             <h3 className="text-2xl font-bold">Resolución de poder</h3>
             <p className="text-slate-300">El presidente ejecuta el poder especial desbloqueado.</p>
             {me.id === state.presidentId ? (
-              <div className="flex gap-2 flex-wrap">
-                {state.players
-                  .filter((p) => p.alive && p.id !== me.id)
-                  .map((p) => (
-                    <button
-                      key={p.id}
-                      className="button-ghost"
-                      onClick={() => socket.emit('agents_execute', { roomCode, targetId: p.id })}
-                    >
-                      Ejecutar {p.nickname}
-                    </button>
-                  ))}
-              </div>
+              <>
+                {state.pendingPower === 'EXECUTE' && (
+                  <div className="flex gap-2 flex-wrap">
+                    {state.players
+                      .filter((p) => p.alive && p.id !== me.id)
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          className="button-ghost"
+                          onClick={() => socket.emit('agents_execute', { roomCode, targetId: p.id })}
+                        >
+                          Ejecutar {p.nickname}
+                        </button>
+                      ))}
+                  </div>
+                )}
+                {state.pendingPower === 'INVESTIGATE' && (
+                  <div className="flex gap-2 flex-wrap">
+                    {state.players
+                      .filter((p) => p.alive && p.id !== me.id)
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          className="button-ghost"
+                          onClick={() => socket.emit('agents_investigate', { roomCode, targetId: p.id })}
+                        >
+                          Investigar {p.nickname}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </>
             ) : (
               <p className="text-slate-400">El presidente está usando el poder.</p>
+            )}
+            {state.lastInvestigation && state.pendingPower === undefined && (
+              <p className="text-xs text-slate-500 text-center">
+                Última investigación: {state.players.find((p) => p.id === state.lastInvestigation?.targetId)?.nickname} es{' '}
+                {state.lastInvestigation?.faction === 'LEAL' ? 'Leal' : 'Infiltrado'}
+              </p>
             )}
           </div>
         );
@@ -218,6 +255,11 @@ export default function GameAgents() {
   return (
     <section className="grid md:grid-cols-[2fr_1fr] gap-4">
       {statusHeader}
+      <div className="card p-5 grid gap-4">
+        <h4 className="text-sm uppercase tracking-[0.2em] text-slate-400">Tablero</h4>
+        <LoyalTrack progress={state.loyalPolicies} />
+        <InfiltratedTrack progress={state.infiltratedPolicies} />
+      </div>
       {renderPhase()}
       <PlayerList
         title="Jugadores"
