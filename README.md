@@ -1,6 +1,6 @@
 # WeParty monorepo (frontend + backend)
 
-Código base para dos juegos party online en español: **El Impostor** y **Agentes Secretos**. Incluye frontend React + Vite + Tailwind, backend Express + Socket.io, CSV local para palabras y guías de despliegue en Netlify (frontend), Render (backend) y Supabase (datos opcionales).
+Código base para dos juegos party online en español: **El Impostor** y **Agentes Secretos**. Incluye frontend React + Vite + Tailwind, backend Express + Socket.io, CSV local para palabras y guías de despliegue en Vercel (frontend), Render (backend) y Supabase (datos opcionales).
 
 ## Estructura
 - `frontend/`: SPA con React Router, Tailwind, cliente Supabase y socket.io-client.
@@ -18,21 +18,19 @@ Código base para dos juegos party online en español: **El Impostor** y **Agent
    - "El Impostor": fases `WORD_REVEAL` → `DISCUSSION` → `VOTING` → `RESULT` controladas por eventos.
    - "Agentes Secretos": fases presidencia, votación, legislación y poderes, con condiciones de victoria por políticas o ejecución del líder.
 
-## Qué verificar en Netlify (frontend)
-- El repo incluye `netlify.toml` en la raíz con:
-  - build command `npm install --prefix frontend && npm run build --prefix frontend`
-  - publish dir `frontend/dist`
-  - redirect SPA `/* -> /index.html 200`
-  - `NODE_VERSION = 20` para que coincida con Vite.
-- Si prefieres configurarlo a mano en Site settings → Build & deploy:
-  - **Base directory**: no hace falta, porque el comando ya apunta a `frontend/`.
-  - **Build command**: `npm install --prefix frontend && npm run build --prefix frontend`
-  - **Publish directory**: `frontend/dist`
-- Variables de entorno en Site configuration → Environment variables:
+## Qué verificar en Vercel (frontend)
+- El repo incluye `vercel.json` en la raíz con:
+  - build static `@vercel/static-build` apuntando a `frontend/package.json` y `dist` como salida.
+  - ruta comodín `/(.*) -> /index.html` para que React Router funcione como SPA.
+- Si lo configuras en el dashboard:
+  - **Root directory**: `frontend`.
+  - **Framework preset**: Vite.
+  - **Build command**: `npm run build` (Vercel correrá `npm install` automáticamente en `frontend`).
+  - **Output directory**: `dist`.
+- Variables de entorno en Project Settings → Environment Variables:
   - `VITE_API_URL` = URL pública del backend en Render/Railway.
   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` si usas Supabase.
-- Fichero `public/_redirects` ya incluido con `/*  /index.html  200` para que React Router funcione.
-- Comprueba que el deploy log no reporte errores de build y que la previsualización abra `index.html` sin 404.
+- Asegúrate de que el preview de Vercel abre `index.html` sin 404 y que los assets se sirven desde `dist/`.
 
 ## Qué hacer en Render (backend)
 - Crear servicio Web apuntando al repo `backend/`.
@@ -42,7 +40,7 @@ Código base para dos juegos party online en español: **El Impostor** y **Agent
   - **Environment**: Node 20+.
 - Variables de entorno:
   - `PORT` (Render asigna automáticamente, usa `PORT` en env).
-  - `FRONTEND_ORIGIN` con el dominio Netlify (y `http://localhost:5173` para pruebas).
+- `FRONTEND_ORIGIN` con el dominio de Vercel (y `http://localhost:5173` para pruebas).
   - Claves Supabase si quieres persistencia (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`).
 - Comprueba en Logs que el servidor arranca y que `/health` responde `ok`.
 
