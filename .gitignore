@@ -1,8 +1,0 @@
-node_modules
-npm-debug.log
-.DS_Store
-frontend/dist
-backend/dist
-.env
-frontend/.env
-backend/.env
